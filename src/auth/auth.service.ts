@@ -1,14 +1,54 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import * as argon from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDto } from './dto';
-import * as argon from 'argon2';
 @Injectable()
 export class AuthService {
   constructor(private prisma: PrismaService) {}
-  signin() {
-    return { msg: 'I am signin from service' };
+  async signup(dto: AuthDto) {
+    // generate the password hash
+    const hash = await argon.hash(dto.password);
+    //save the new user in db
+    try {
+      const user = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          hash,
+        },
+      });
+
+      // remove hash from the returned user object (without mutating the original)
+      const { hash: _, ...userWithoutHash } = user;
+      // delete user.hash;
+      // return the saved user
+      return userWithoutHash;
+    } catch (error) {
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ForbiddenException('Credentials taken');
+        }
+      }
+      throw error;
+    }
   }
-  signup(dto: AuthDto) {
-    return { msg: 'I am signup from service' };
+
+  async signin(dto: AuthDto) {
+    // Find the user by email
+    const user = await this.prisma.user.findUnique({
+      where: {
+        email: dto.email,
+      },
+    });
+    // If user doesn't exist throw an exception
+    if (!user) throw new ForbiddenException('Credentials incorrect');
+    // compare password
+    const pwMatches = await argon.verify(user.hash, dto.password);
+    // if password incorrect throw exception
+    if (!pwMatches) throw new ForbiddenException('Credentials incorrect');
+    //send back the user
+    const { hash: _, ...userWithoutHash } = user;
+    //delete user.hash;
+    return userWithoutHash;
   }
 }
