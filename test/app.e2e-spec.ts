@@ -38,20 +38,48 @@ describe('App e2e', () => {
         await pactum
           .spec()
           .post('/auth/signup')
-          .withBody(dto)
+          .withBody({
+            password: dto.password,
+          })
           .expectStatus(400);
       });
-      it('should Sign up', async () => {
+      it('should throw if password empty', async () => {
         await pactum
           .spec()
           .post('/auth/signup')
-          .withBody(dto)
-          .expectStatus(201);
+          .withBody({
+            email: dto.email,
+          })
+          .expectStatus(400);
+      });
+      it('should throw if no body provided', async () => {
+        await pactum.spec().post('/auth/signup').expectStatus(400);
       });
     });
     describe('Signin', () => {
-      it('should Sign in', async () => {
+      it('should throw if email empty', async () => {
         await pactum
+          .spec()
+          .post('/auth/signin')
+          .withBody({
+            password: dto.password,
+          })
+          .expectStatus(400);
+      });
+      it('should throw if password empty', async () => {
+        await pactum
+          .spec()
+          .post('/auth/signin')
+          .withBody({
+            email: dto.email,
+          })
+          .expectStatus(400);
+      });
+      it('should throw if no body provided', async () => {
+        await pactum.spec().post('/auth/signin').expectStatus(400);
+      });
+      it('should Sign in', () => {
+        return pactum
           .spec()
           .post('/auth/signin')
           .withBody(dto)
