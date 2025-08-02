@@ -1,9 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { describe } from 'node:test';
+// import { describe } from 'node:test';
 import * as pactum from 'pactum';
 import { AuthDto } from 'src/auth/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { EditUserDto } from 'src/user/dto';
 import { AppModule } from '../src/app.module';
 
 describe('App e2e', () => {
@@ -25,12 +26,12 @@ describe('App e2e', () => {
     await prisma.cleanDb();
     pactum.request.setBaseUrl('http://localhost:3333');
   });
-  afterAll(() => {
-    app.close();
+  afterAll(async () => {
+    await app.close();
   });
   describe('Auth', () => {
     const dto: AuthDto = {
-      email: 'mubin.cbs@gmail.com',
+      email: 'mubin.c@gmail.com',
       password: '1234',
     };
     describe('Signup', () => {
@@ -55,8 +56,16 @@ describe('App e2e', () => {
       it('should throw if no body provided', async () => {
         await pactum.spec().post('/auth/signup').expectStatus(400);
       });
+      it('should Sign up', async () => {
+        await pactum
+          .spec()
+          .post('/auth/signup')
+          .withBody(dto)
+          .expectStatus(201);
+      });
     });
     describe('Signin', () => {
+      let accessToken: string;
       it('should throw if email empty', async () => {
         await pactum
           .spec()
@@ -78,23 +87,49 @@ describe('App e2e', () => {
       it('should throw if no body provided', async () => {
         await pactum.spec().post('/auth/signin').expectStatus(400);
       });
-      it('should Sign in', () => {
-        return pactum
+      it('should Sign in', async () => {
+        await pactum
           .spec()
           .post('/auth/signin')
+          .withBody(dto)
+          .expectStatus(200)
+          .stores('userAccessToken', 'access_token');
+      });
+    });
+  });
+  describe('User', () => {
+    describe('Get me', () => {
+      it('should get current user', async () => {
+        await pactum
+          .spec()
+          .get('/users/me')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200);
+      });
+    });
+    describe('Edit user', () => {
+      it('should edit user', async () => {
+        const dto: EditUserDto = {
+          firstName: 'Mubin',
+          email: 'mubin@gmail.com',
+        };
+        await pactum
+          .spec()
+          .patch('/users')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
           .withBody(dto)
           .expectStatus(200);
       });
     });
   });
-  describe('User', () => {
-    (describe('Get me'), () => {});
-    (describe('Edit user'), () => {});
-  });
   describe('Bookmarks', () => {
     describe('Create Bookmark', () => {});
     describe('Get Bookmark by Id', () => {});
-    describe('Edit Bookmark', () => {});
-    describe('Delete Bookmark', () => {});
+    describe('Edit Bookmark by Id', () => {});
+    describe('Delete Bookmark by Id', () => {});
   });
 });
