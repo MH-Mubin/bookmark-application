@@ -122,12 +122,27 @@ describe('App e2e', () => {
             Authorization: 'Bearer $S{userAccessToken}',
           })
           .withBody(dto)
-          .expectStatus(200);
+          .expectStatus(200)
+          .expectBodyContains(dto.firstName)
+          .expectBodyContains(dto.email);
       });
     });
   });
   describe('Bookmarks', () => {
+    describe('Get Empty Bookmark', () => {
+      it('Should get Bookmarks', async () => {
+        await pactum
+          .spec()
+          .get('/bookmarks')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200)
+          .inspect();
+      });
+    });
     describe('Create Bookmark', () => {});
+    describe('Get Bookmarks', () => {});
     describe('Get Bookmark by Id', () => {});
     describe('Edit Bookmark by Id', () => {});
     describe('Delete Bookmark by Id', () => {});
