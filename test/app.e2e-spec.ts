@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 // import { describe } from 'node:test';
 import * as pactum from 'pactum';
 import { AuthDto } from 'src/auth/dto';
+import { CreateBookmarkDto, EditBookmarkDto } from 'src/bookmark/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EditUserDto } from 'src/user/dto';
 import { AppModule } from '../src/app.module';
@@ -138,13 +139,98 @@ describe('App e2e', () => {
             Authorization: 'Bearer $S{userAccessToken}',
           })
           .expectStatus(200)
+          .expectBody([]);
+      });
+    });
+    describe('Create Bookmark', () => {
+      const dto: CreateBookmarkDto = {
+        title: 'First Bookmark',
+        link: 'https://docs.nestjs.com/',
+      };
+      it('should Create Bookmark', async () => {
+        await pactum
+          .spec()
+          .post('/bookmarks')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .withBody(dto)
+          .expectStatus(201)
+          .stores('bookmarkId', 'id');
+      });
+    });
+    describe('Get Bookmarks', () => {
+      it('Should get Bookmarks', async () => {
+        await pactum
+          .spec()
+          .get('/bookmarks')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200)
+          .expectJsonLength(1);
+      });
+    });
+    describe('Get Bookmark by Id', () => {
+      it('Should get Bookmark by Id', async () => {
+        await pactum
+          .spec()
+          .get('/bookmarks/{id}')
+          .withPathParams('id', '$S{bookmarkId}')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200)
+          .expectBodyContains('$S{bookmarkId}');
+      });
+    });
+    describe('Edit Bookmark by Id', () => {
+      const dto: EditBookmarkDto = {
+        title:
+          'NestJS — A Progressive Node.js Framework for Scalable & Maintainable Server-Side Applications',
+        description:
+          'Nest (NestJS) is a framework for building efficient, scalable Node.js server-side applications.',
+      };
+      it('Should edit Bookmark', async () => {
+        await pactum
+          .spec()
+          .patch('/bookmarks/{id}')
+          .withPathParams('id', '$S{bookmarkId}')
+          .withBody(dto)
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200)
+          .expectBodyContains(dto.title)
+          .expectBodyContains(dto.description)
           .inspect();
       });
     });
-    describe('Create Bookmark', () => {});
-    describe('Get Bookmarks', () => {});
-    describe('Get Bookmark by Id', () => {});
-    describe('Edit Bookmark by Id', () => {});
-    describe('Delete Bookmark by Id', () => {});
+    describe('Delete Bookmark by Id', () => {
+      it('Should delete Bookmark', async () => {
+        await pactum
+          .spec()
+          .delete('/bookmarks/{id}')
+          .withPathParams('id', '$S{bookmarkId}')
+
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(204)
+
+          .inspect();
+      });
+
+      it('Should get empty Bookmarks', async () => {
+        await pactum
+          .spec()
+          .get('/bookmarks')
+          .withHeaders({
+            Authorization: 'Bearer $S{userAccessToken}',
+          })
+          .expectStatus(200)
+          .expectJsonLength(0);
+      });
+    });
   });
 });
